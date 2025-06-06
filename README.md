@@ -19,7 +19,7 @@ This repo includes:
 
 - 🛠️ **Scripts & Tools**  
   Custom scripts created during my journey — useful for enumeration, automation, and exploit development.
-  - [FuelCMS RCE (CVE-2018-16763)](https://github.com/dv-smith/fuelcms-rce)
+  - [FuelCMS RCE (CVE-2018-16763) for Tryhackme Vulnerability Capstone)](https://github.com/dv-smith/Tryhackme-Vulnerability-Capstone)
 
 
 - 📝 **Study Notes**  
