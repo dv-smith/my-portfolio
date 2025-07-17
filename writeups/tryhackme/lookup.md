@@ -41,7 +41,7 @@ The IP resolves as `lookup.thm`, which I added to `/etc/hosts`. Visiting the sit
 I used `gobuster` to look for additional content:
 
 ```bash
-gobuster dir -u http://10.10.102.13 -w /usr/share/wordlists/dirb/common.txt -x php,html,txt -t 50 -o gobuster_results.txt -k -r
+gobuster dir -u <target ip> -w /usr/share/wordlists/dirb/common.txt -x php,html,txt -t 50 -o gobuster_results.txt -k -r
 ```
 
 Only `/index.php` appeared relevant.
@@ -90,7 +90,7 @@ hydra -l jose -P /usr/share/wordlists/rockyou.txt lookup.thm http-post-form "/lo
 
 ```
 
-- Credentials found: `jose:password123`
+- Credentials found: `jose:REDACTED`
 
 ---
 
@@ -143,7 +143,7 @@ Bruteforcing with Hydra:
 hydra -l think -P lookup.txt ssh://10.10.102.13
 ```
 
-- Valid credentials found: `think:josemario.AKA(think)`
+- Valid credentials found: `think:REDACTED`
 - User flag located at `/home/think/user.txt`
 
 ---
@@ -189,18 +189,6 @@ Root flag retrieved from `/root/root.txt`.
 
 ---
 
-## 📂 Flags & Loot
-
-- **User Flag:** `38375fb4dd8baa2b2039ac03d92b820e`
-- **Root Flag:** `5a285a9f257e45c68bb6c9f9f57d18e8`
-
-**Credentials:**
-
-- Web login: `jose:password123`
-- SSH user: `think:josemario.AKA(think)`
-- SSH root: Private key recovered from `/root/.ssh/id_rsa`
-
----
 
 ## 🛠️ Tools Used
 
