@@ -1,5 +1,3 @@
-# Lookup
-
 # Lookup - TryHackMe Walkthrough
 
 ## 🧩 Overview
