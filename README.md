@@ -17,7 +17,7 @@ This repo is where I keep track of everything I'm learning as I get deeper into 
 - ✅ Build a solid base in ethical hacking and Linux
 - 🔁 Keep sharpening my skills through hands-on labs and CTFs
 - 🚧 Prep for the PJPT exam (target: mm/yyyy)
-- 🐞 Get into real-world bug bounties and red team projects
+- 🐞 Get into pentesting and red team projects
 - 🧠 Learn consistently and document everything along the way
 
 ---
