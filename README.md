@@ -59,7 +59,7 @@ Each folder contains a `README.md` or notes file to guide you through the conten
 
 | Platform        | Status                  |
 |----------------|-------------------------|
-| TryHackMe       | In Progress (JPPT Path) |
+| TryHackMe       | JPT path complete. Top 4% |
 | OverTheWire     | Bandit: Completed ✅     |
 | PJPT Exam       | Planned (Target: mm/yyyy) |
 | Custom Scripts  | Ongoing                 |
