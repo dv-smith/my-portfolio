@@ -135,7 +135,7 @@ chmod +x /tmp/id
 export PATH=/tmp:$PATH
 ```
 
-Running `pwm` now read the file `/home/think/.passwords`, which contained a long list of possible passwords.
+Running `pwm` now reads the file `/home/think/.passwords`, which contained a long list of possible passwords.
 
 Bruteforcing with Hydra:
 
