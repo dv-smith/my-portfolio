@@ -250,5 +250,3 @@ This lab demonstrated:
 - Post-exploitation hygiene matters — always clean up after yourself
 
 ---
-
-*Created by [Your Name or Handle] – for educational and portfolio use.*
