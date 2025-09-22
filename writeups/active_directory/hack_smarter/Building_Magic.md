@@ -1,4 +1,14 @@
 
+
+# Introduction 
+
+Buildingmagic is a single-machine Active Directory environment created by **Tyler Ramsbey** as part of the [HackSmarter](https://courses.hacksmarter.org/dashboard) training platform.  
+It is designed to simulate a full domain compromise in a contained lab environment.  
+
+The path to Domain Admin begins with a set of breached user credentials and develops through classic AD techniques, including Kerberoasting, service privilege abuse, and an SMB relay attack delivered via malicious `.lnk` files.  
+While a web application on port 8080 initially looks promising, it ultimately serves as a rabbit hole, and the real exploitation occurs entirely within the domain.  
+
+This write-up documents the full chain step by step, from the initial foothold to Domain Admin.
 --- 
 
 
