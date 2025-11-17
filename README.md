@@ -6,8 +6,8 @@ This repo is where I keep track of everything I'm learning as I get deeper into 
 
 ## 📁 What’s Inside
 
-- **CTF Writeups** — My solutions and reflections from challenges and vulnerable machines.
-- **Scripts & Tools** — Handy stuff I’ve written for enumeration, automation, and exploits.
+- [**CTF Writeups**](https://github.com/dv-smith/my-portfolio/tree/main/writeups)— My solutions and reflections from challenges and vulnerable machines.
+- [**Scripts & Tools**]( — Handy stuff I’ve written for enumeration, automation, and exploits.
 - **Study Notes** — Markdown files covering common tools and techniques: Nmap, Burp, shells, privesc, etc.
 
 ---
@@ -22,10 +22,3 @@ This repo is where I keep track of everything I'm learning as I get deeper into 
 
 ---
 
-## ⚙️ How to Use This Repo
-
-Feel free to poke around, clone it, or use anything here as a reference:
-
-```bash
-git clone https://github.com/dvsmith/dvsmith.git
-cd dvsmith
