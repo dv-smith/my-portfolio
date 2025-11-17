@@ -1,6 +1,6 @@
 # 🛡️ Offensive Security Portfolio
 
-This repo is where I keep track of everything I'm learning as I get deeper into offensive security — from hands-on labs to scripting, CTFs, and everything in between. I'm building this up as I prepare for certs like the PJPT and work toward landing a real role in pentesting.
+This repository tracks my journey into offensive security — hands-on labs, CTFs, scripts, and notes from real learning and practice. I’m building my skills one step at a time, focusing on practical testing, documentation, and clear methodology.
 
 ---
 
@@ -12,13 +12,13 @@ This repo is where I keep track of everything I'm learning as I get deeper into 
 
 ---
 
-## 🧭 Current Goals
+## 🧭 Current Focus
 
-- ✅ Build a solid base in ethical hacking and Linux
-- 🔁 Keep sharpening my skills through hands-on labs and CTFs
-- 🚧 Prep for the PJPT exam (target: mm/yyyy)
-- 🐞 Get into pentesting and red team projects
-- 🧠 Learn consistently and document everything along the way
+- ✅ **Practical Junior Penetration Tester (PJPT)** certified  
+- 🔍 Completing the **HTB Pentester Path**  
+- ⚙️ Strengthening skills in **AD attacks, pivoting, and privilege escalation**  
+- 🎯 Preparing for the **OSCP**  
+- 🧠 Documenting everything — from wins to mistakes — to keep improving and stay sharp
 
 ---
 
