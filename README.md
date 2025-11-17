@@ -7,8 +7,8 @@ This repo is where I keep track of everything I'm learning as I get deeper into 
 ## 📁 What’s Inside
 
 - [**CTF Writeups**](https://github.com/dv-smith/my-portfolio/tree/main/writeups)— My solutions and reflections from challenges and vulnerable machines.
-- [**Scripts & Tools**]( — Handy stuff I’ve written for enumeration, automation, and exploits.
-- **Study Notes** — Markdown files covering common tools and techniques: Nmap, Burp, shells, privesc, etc.
+- [**Scripts & Tools**](https://github.com/dv-smith/my-portfolio/tree/main/scripts_and_tools)— Handy stuff I’ve written for enumeration, automation, and exploits.
+- [**Study Notes**](https://github.com/dv-smith/my-portfolio/tree/main/study_notes)— Markdown files covering common tools and techniques: Nmap, Burp, shells, privesc, etc.
 
 ---
 
