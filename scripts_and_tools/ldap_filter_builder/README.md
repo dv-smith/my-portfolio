@@ -19,20 +19,4 @@ Generates LDAP filters and ready-to-use commands for:
 - Save/load custom presets
 - Dark/light theme
 
-## Usage
 
-**Live tool**: [https://dv-smith.github.io/your-repo-name/](https://dv-smith.github.io/your-repo-name/)
-
-Or download `index.html` and open in any browser. No dependencies needed.
-
-## Disclaimer
-
-For authorized penetration testing only. Get written permission before testing any systems you don't own.
-
-## Development
-
-Built with AI assistance as part of my penetration testing portfolio. Single HTML file for easy deployment.
-
-## License
-
-MIT
