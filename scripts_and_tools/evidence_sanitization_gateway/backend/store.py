@@ -245,6 +245,138 @@ def write_detokenise_audit(text: str, engagement_id: str, count: int, unresolved
     conn.close()
 
 
+def list_engagements() -> list[dict]:
+    """Return all engagement IDs with summary stats."""
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+    cur.execute("""
+        SELECT
+            engagement_id,
+            COUNT(*)            AS token_count,
+            MIN(created_at)     AS first_seen,
+            MAX(created_at)     AS last_seen
+        FROM token_mappings
+        GROUP BY engagement_id
+        ORDER BY last_seen DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "engagement_id": r[0],
+            "token_count":   r[1],
+            "first_seen":    r[2],
+            "last_seen":     r[3],
+        }
+        for r in rows
+    ]
+
+
+def close_engagement(engagement_id: str) -> int:
+    """
+    Purge all token mappings for an engagement.
+    Audit log is retained (contains no sensitive data).
+    Returns number of mappings deleted.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+    cur.execute(
+        "DELETE FROM token_mappings WHERE engagement_id = ?",
+        (engagement_id,)
+    )
+    deleted = cur.rowcount
+
+    # Also remove the per-engagement salt file so future runs
+    # with the same ID get a fresh salt and cannot reuse old tokens.
+    salt_file = SALT_PATH.parent / f"salt_{engagement_id}.bin"
+    if salt_file.exists():
+        salt_file.unlink()
+
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+def close_engagement(engagement_id: str) -> dict:
+    """
+    Purge all token mappings for an engagement and delete its salt file.
+    Audit log entries are retained — they contain no sensitive data.
+    Returns a summary of what was deleted.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+
+    # Count before deletion
+    cur.execute("SELECT COUNT(*) FROM token_mappings WHERE engagement_id = ?", (engagement_id,))
+    mapping_count = cur.fetchone()[0]
+
+    # Delete mappings
+    cur.execute("DELETE FROM token_mappings WHERE engagement_id = ?", (engagement_id,))
+
+    # Log the close-out event in audit log
+    cur.execute("""
+        INSERT INTO audit_log
+        (timestamp, input_sha256, input_size, formats_detected, token_count,
+         risk_score, risk_reasons, residual_findings, blocked, actions, engagement_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        time.time(),
+        "engagement_closed",
+        0,
+        json.dumps([]),
+        mapping_count,
+        "CLOSED",
+        json.dumps([]),
+        json.dumps([]),
+        0,
+        json.dumps([f"closed_engagement:purged_{mapping_count}_mappings"]),
+        engagement_id,
+    ))
+
+    conn.commit()
+    conn.close()
+
+    # Delete the engagement salt file
+    salt_file = SALT_PATH.parent / f"salt_{engagement_id}.bin"
+    salt_deleted = False
+    if salt_file.exists():
+        salt_file.unlink()
+        salt_deleted = True
+
+    return {
+        "engagement_id": engagement_id,
+        "mappings_purged": mapping_count,
+        "salt_deleted": salt_deleted,
+    }
+
+
+def list_engagements() -> list[dict]:
+    """List all engagement IDs with their mapping count and last activity."""
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            engagement_id,
+            COUNT(*) as mapping_count,
+            MAX(created_at) as last_activity
+        FROM token_mappings
+        GROUP BY engagement_id
+        ORDER BY last_activity DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+
+    return [
+        {
+            "engagement_id": r[0],
+            "mapping_count": r[1],
+            "last_activity": r[2],
+        }
+        for r in rows
+    ]
+
+
 def get_audit_log(engagement_id: str | None = None, limit: int = 50) -> list[dict]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row

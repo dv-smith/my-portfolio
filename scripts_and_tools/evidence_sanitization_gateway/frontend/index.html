@@ -38,13 +38,22 @@
   .logo-mark::before { content:''; position:absolute; inset:2px; border:1px solid var(--accent-dim); }
   .logo-text { font-family:var(--mono); font-size:13px; font-weight:500; letter-spacing:0.12em; }
   .logo-text span { color:var(--accent); }
-  .header-right { display:flex; align-items:center; gap:20px; }
+  .header-right { display:flex; align-items:center; gap:16px; }
   .status-dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse-dot 2s infinite; }
   @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .status-label { font-family:var(--mono); font-size:10px; color:var(--text-mid); letter-spacing:0.1em; text-transform:uppercase; }
-  .eng-input { background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 10px; width:140px; outline:none; transition:border-color 0.15s; }
+
+  /* Engagement ID field */
+  .eng-field { display:flex; flex-direction:column; gap:3px; }
+  .eng-label { font-family:var(--mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+  .eng-row { display:flex; align-items:center; gap:6px; }
+  .eng-input { background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 10px; width:160px; outline:none; transition:border-color 0.15s; }
   .eng-input:focus { border-color:var(--accent-dim); }
   .eng-input::placeholder { color:var(--text-dim); }
+  .eng-input.warn { border-color:var(--amber); color:var(--amber); }
+  .eng-warn { font-family:var(--mono); font-size:9px; color:var(--amber); letter-spacing:0.05em; display:none; }
+  .btn-close-eng { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; padding:4px 9px; border:1px solid var(--red); background:transparent; color:var(--red); cursor:pointer; transition:all 0.12s; white-space:nowrap; }
+  .btn-close-eng:hover { background:var(--red); color:var(--bg); }
 
   /* LAYOUT */
   .main { display:grid; grid-template-columns:1fr 1fr 390px; gap:1px; background:var(--border); height:calc(100vh - 52px); overflow:hidden; }
@@ -180,24 +189,42 @@
   .ptag-detect { border-color:#ff6b9d44; color:#ff6b9d; }
   .relevance-dot { color:var(--green); font-size:9px; font-family:var(--mono); vertical-align:middle; margin-left:4px; }
 
-  /* COMPOSER */
-  .prompt-composer { border-top:1px solid var(--border); background:var(--bg); flex-shrink:0; display:flex; flex-direction:column; }
-  .composer-header { padding:8px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-raised); }
+  /* COMPOSER — full height hero */
+  .prompt-composer { display:flex; flex-direction:column; flex:1; overflow:hidden; background:var(--bg); }
+  .composer-header { padding:10px 13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-raised); flex-shrink:0; }
   .composer-title { font-family:var(--mono); font-size:10px; color:var(--text-mid); letter-spacing:0.12em; text-transform:uppercase; }
   .composer-tabs { display:flex; gap:1px; }
   .ctab { font-family:var(--mono); font-size:9px; letter-spacing:0.08em; text-transform:uppercase; padding:3px 8px; color:var(--text-dim); cursor:pointer; border:1px solid var(--border); transition:all 0.12s; }
   .ctab:hover { color:var(--text); }
   .ctab.active { color:var(--purple); border-color:var(--purple-dim); }
-  .composer-prompt { font-family:var(--mono); font-size:11px; padding:11px 13px; line-height:1.65; color:var(--text); background:transparent; border:none; outline:none; resize:none; height:150px; width:100%; }
+  .composer-prompt { font-family:var(--mono); font-size:11px; padding:13px; line-height:1.65; color:var(--text); background:transparent; border:none; outline:none; resize:none; flex:1; width:100%; min-height:0; }
   .composer-prompt::-webkit-scrollbar { width:4px; }
   .composer-prompt::-webkit-scrollbar-thumb { background:var(--border-hi); }
-  .composer-rendered { font-family:var(--mono); font-size:11px; padding:11px 13px; line-height:1.65; color:var(--text); height:150px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; }
+  .composer-rendered { font-family:var(--mono); font-size:11px; padding:13px; line-height:1.65; color:var(--text); flex:1; overflow-y:auto; white-space:pre-wrap; word-break:break-word; min-height:0; }
   .composer-rendered::-webkit-scrollbar { width:4px; }
   .composer-rendered::-webkit-scrollbar-thumb { background:var(--border-hi); }
   .c-evidence { background:rgba(192,132,252,0.08); border-bottom:1px solid var(--purple-dim); color:var(--text-mid); font-size:10px; }
-  .composer-footer { padding:8px 13px; border-top:1px solid var(--border); display:flex; gap:7px; align-items:center; background:var(--bg-raised); }
+  .composer-footer { padding:10px 13px; border-top:1px solid var(--border); display:flex; gap:7px; align-items:center; background:var(--bg-raised); flex-shrink:0; }
   .inject-toggle { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10px; color:var(--text-dim); cursor:pointer; user-select:none; margin-left:auto; }
   .inject-toggle input { accent-color:var(--purple); }
+
+  /* Prompt selector dropdown */
+  .prompt-selector { padding:10px 13px; border-bottom:1px solid var(--border); background:var(--bg-raised); flex-shrink:0; display:flex; flex-direction:column; gap:7px; }
+  .prompt-selector-label { font-family:var(--mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+  .prompt-select {
+    width:100%; background:var(--bg-input); border:1px solid var(--border-hi);
+    color:var(--text); font-family:var(--mono); font-size:11px;
+    padding:7px 10px; outline:none; cursor:pointer; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5568'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 10px center;
+    transition:border-color 0.12s;
+  }
+  .prompt-select:focus { border-color:var(--purple-dim); }
+  .prompt-select option { background:var(--bg-raised); color:var(--text); }
+
+  /* Selected prompt info strip */
+  .prompt-info { font-family:var(--sans); font-size:11px; color:var(--text-mid); line-height:1.4; min-height:16px; }
+  .prompt-info-relevant { color:var(--green); font-family:var(--mono); font-size:9px; letter-spacing:0.08em; margin-left:6px; }
 
   /* Mode toggle buttons */
   .mode-btn {
@@ -249,9 +276,33 @@
   <div class="header-right">
     <div class="status-dot"></div>
     <span class="status-label">Local only · No telemetry</span>
-    <input class="eng-input" id="engagementId" type="text" value="default" placeholder="engagement-id">
+    <div class="eng-field">
+      <span class="eng-label">Engagement ID</span>
+      <div class="eng-row">
+        <input class="eng-input" id="engagementId" type="text" value="" placeholder="e.g. client-acme-2025" oninput="onEngagementChange()">
+        <button class="btn-close-eng" onclick="confirmCloseEngagement()" title="Purge all token mappings for this engagement">Close Engagement</button>
+      </div>
+      <span class="eng-warn" id="engWarn">⚠ Set an engagement ID before sanitising</span>
+    </div>
   </div>
 </header>
+
+<!-- Close engagement confirmation modal -->
+<div id="closeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-panel);border:1px solid var(--red);padding:24px;max-width:420px;width:90%;font-family:var(--mono);">
+    <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:12px;letter-spacing:0.05em">⚠ CLOSE ENGAGEMENT</div>
+    <div style="font-size:11px;color:var(--text);line-height:1.7;margin-bottom:16px">
+      This will permanently delete all token mappings for:<br>
+      <strong id="modalEngId" style="color:var(--accent)"></strong><br><br>
+      The audit log will be kept. The encryption salt will be deleted — existing tokens cannot be restored after this point.<br><br>
+      <span style="color:var(--amber)">Only do this when the engagement is complete and you no longer need to detokenise LLM responses.</span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="$('closeModal').style.display='none'">Cancel</button>
+      <button class="btn btn-danger" onclick="doCloseEngagement()">Delete Mappings</button>
+    </div>
+  </div>
+</div>
 
 <div class="main">
 
@@ -396,37 +447,38 @@
   ══════════════════════════════════ -->
   <div class="panel panel-prompts">
     <div class="panel-header">
-      <span class="panel-title">Prompt Library</span>
+      <span class="panel-title">Prompt Composer</span>
       <span class="panel-badge" style="color:var(--purple)">LLM Ready</span>
     </div>
 
-    <!-- Format filter pills -->
-    <div class="prompt-formats" id="promptFormats">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim)">Run sanitisation to see format suggestions</span>
+    <!-- Template selector -->
+    <div class="prompt-selector">
+      <span class="prompt-selector-label">Select Template</span>
+      <select class="prompt-select" id="promptSelect" onchange="onPromptSelect()">
+        <option value="">— choose a template —</option>
+      </select>
+      <div class="prompt-info" id="promptInfo"></div>
     </div>
 
-    <!-- Prompt cards -->
-    <div class="prompt-cards" id="promptCards"></div>
-
-    <!-- Composer -->
+    <!-- Composer — full height -->
     <div class="prompt-composer">
       <div class="composer-header">
-        <span class="composer-title">Prompt Composer</span>
+        <span class="composer-title">Prompt</span>
         <div class="composer-tabs">
           <div class="ctab active" id="ctab-edit" onclick="switchComposer('edit')">Edit</div>
           <div class="ctab" id="ctab-preview" onclick="switchComposer('preview')">Preview</div>
         </div>
       </div>
-      <div id="composer-edit" style="display:flex;flex-direction:column">
-        <textarea class="composer-prompt" id="composerText" placeholder="Select a template above, or write your own.&#10;&#10;Use {{EVIDENCE}} as a placeholder for&#10;the sanitised output."></textarea>
+      <div id="composer-edit" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">
+        <textarea class="composer-prompt" id="composerText" placeholder="Select a template above, or write your own.&#10;&#10;Use {{EVIDENCE}} as a placeholder for&#10;the sanitised output.&#10;&#10;After sanitising, click → Prompt or select&#10;a template to get started."></textarea>
       </div>
-      <div id="composer-preview" style="display:none">
+      <div id="composer-preview" style="display:none;flex:1;overflow:hidden;min-height:0">
         <div class="composer-rendered" id="composerPreview"></div>
       </div>
       <div class="composer-footer">
         <button class="btn btn-purple" onclick="copyComposedPrompt()" id="copyComposedBtn">Copy Prompt</button>
         <button class="btn btn-secondary" onclick="clearComposer()">Clear</button>
-        <label class="inject-toggle"><input type="checkbox" id="injectEvidence" checked> Auto-inject</label>
+        <label class="inject-toggle"><input type="checkbox" id="injectEvidence" checked> Auto-inject evidence</label>
       </div>
     </div>
   </div>
@@ -487,7 +539,7 @@ Review the following HTTP traffic and identify:
 4. Information disclosure (verbose errors, version headers, stack traces)
 5. Business logic issues visible from request structure
 
-[AUTH_*] and [COOKIE_*] tokens represent redacted sensitive values — reason from their presence and context.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- HTTP TRAFFIC ---
 {{EVIDENCE}}
@@ -506,7 +558,7 @@ Analyse the following for:
 4. JWT or bearer token structure issues (alg:none, weak signing, etc.)
 5. Potential for auth bypass, privilege escalation, or session fixation
 
-[AUTH_*] and [COOKIE_*] tokens represent redacted credential material.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- HTTP TRAFFIC ---
 {{EVIDENCE}}
@@ -525,7 +577,7 @@ Analyse the following JSON for:
 4. Versioning or endpoint structure suggesting additional attack surface
 5. Rate limiting or authentication bypass indicators
 
-Tokenised values ([EMAIL_*], [SECRET_*]) represent redacted sensitive data.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- API RESPONSE ---
 {{EVIDENCE}}
@@ -544,7 +596,7 @@ Review the following and identify:
 4. Kerberoastable or AS-REP-roastable account patterns
 5. GPO or OU delegation misconfigurations
 
-[LDAP_*] tokens represent redacted distinguished names — reason from structural patterns.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- LDAP DATA ---
 {{EVIDENCE}}
@@ -565,7 +617,7 @@ Review the following sanitised LinPEAS output and:
 4. **Service and software misconfigurations** — highlight services running as root that shouldn't be, or software with known privesc paths
 5. **Suggested next commands** — 3-5 specific commands to verify or exploit the top findings
 
-Token placeholders like [USER_xxxx], [PRIV_IP_xxxx], [KERNEL_xxxx] represent redacted sensitive values. Reason from context and structure.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 Format your response with clear headings. Be concise — focus on actionable findings.
 
@@ -587,7 +639,7 @@ From the following sanitised LinPEAS output, identify:
 4. **Active sessions and processes** — other logged-in users, interesting processes, network connections
 5. **Data of interest** — database files, backup archives, credential stores, private keys
 
-[USER_xxxx] = redacted username, [PRIV_IP_xxxx] = redacted IP, [SSH_FP_xxxx] = redacted key fingerprint.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- LINPEAS OUTPUT ---
 {{EVIDENCE}}
@@ -618,7 +670,7 @@ Review the following sanitised WinPEAS output and:
 
 5. **Suggested next steps** — specific commands or tools to verify/exploit top findings (e.g. PowerUp, Rubeus, PrintSpoofer)
 
-[USER_xxxx] = redacted username/account, [PRIV_IP_xxxx] = redacted IP, [HASH_xxxx] = redacted hash.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- WINPEAS OUTPUT ---
 {{EVIDENCE}}
@@ -642,7 +694,7 @@ From the following sanitised WinPEAS output, identify:
 
 5. **Interesting files** — backup files, database connections strings, deployment scripts containing credentials
 
-[USER_xxxx] = redacted account, [HASH_xxxx] = redacted hash, [PRIV_IP_xxxx] = redacted IP address.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- WINPEAS OUTPUT ---
 {{EVIDENCE}}
@@ -682,7 +734,7 @@ From the following sanitised evidence, extract and categorise:
 
 Format output as JSON: { "type": "", "value": "", "confidence": "", "context": "" }
 
-Note: sensitive values appear as tokens (e.g. [PRIV_IP_xxxx]) — include as placeholders.
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
 
 --- EVIDENCE ---
 {{EVIDENCE}}
@@ -1042,74 +1094,146 @@ function renderActions(actions) {
 }
 
 // ══════════════════════════════════════════════
-// PROMPT LIBRARY
+// ENGAGEMENT MANAGEMENT
+// ══════════════════════════════════════════════
+
+async function loadEngagements() {
+  try {
+    const resp = await fetch('/api/engagements');
+    const engagements = await resp.json();
+    // Store for reference but don't populate a select — user types their own ID
+    return engagements;
+  } catch(e) { return []; }
+}
+
+function onEngagementChange() {
+  const val = $('engagementId').value.trim();
+  const warn = $('engWarn');
+  const input = $('engagementId');
+  if (!val || val === 'default') {
+    warn.style.display = 'block';
+    input.classList.add('warn');
+  } else {
+    warn.style.display = 'none';
+    input.classList.remove('warn');
+  }
+}
+
+function confirmCloseEngagement() {
+  const id = engagementId();
+  if (id === 'default') {
+    alert('Set a specific engagement ID before closing.');
+    return;
+  }
+  $('modalEngId').textContent = id;
+  $('closeModal').style.display = 'flex';
+}
+
+async function doCloseEngagement() {
+  const id = engagementId();
+  $('closeModal').style.display = 'none';
+  try {
+    const resp = await fetch(`/api/engagement/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'API error');
+    alert(`Engagement "${id}" closed.\n${data.mappings_deleted.mappings_purged} token mappings deleted.\nAudit log retained.`);
+  } catch(e) {
+    alert('Close failed: ' + e.message);
+  }
+}
+
+// Show warning on load if engagement is still default
+window.addEventListener('load', () => {
+  onEngagementChange();
+  populatePromptSelect([], []);
+});
+
+// ══════════════════════════════════════════════
+// PROMPT LIBRARY — DROPDOWN
 // ══════════════════════════════════════════════
 const FORMAT_LABELS = { nmap:'Nmap', secretsdump:'secretsdump', http_request:'HTTP Req', http_response:'HTTP Resp', json:'JSON', ldap:'LDAP/BloodHound', peas_linux:'LinPEAS', peas_windows:'WinPEAS' };
 
-function renderPromptLibrary(formats, detectionTypes) {
-  activeFormats = new Set(formats);
-  activeFilter  = null;
-
-  const fmtEl = $('promptFormats');
-  if (!formats.length) {
-    fmtEl.innerHTML = '<span style="font-family:var(--mono);font-size:10px;color:var(--text-dim)">No specific format detected — showing all prompts</span>';
-  } else {
-    fmtEl.innerHTML = ['all',...formats].map(f => {
-      const label = f==='all'?'All':(FORMAT_LABELS[f]||f);
-      return `<span class="format-tag ${f==='all'?'active':'dim'}" data-fmt="${f}" onclick="filterPrompts('${f}',this)">${label}</span>`;
-    }).join('');
-  }
-
-  renderPromptCards(null, formats, detectionTypes);
-}
-
-function filterPrompts(fmt, el) {
-  $('promptFormats').querySelectorAll('.format-tag').forEach(t => { t.classList.remove('active'); t.classList.add('dim'); });
-  el.classList.remove('dim'); el.classList.add('active');
-  activeFilter = fmt==='all'?null:fmt;
-  renderPromptCards(activeFilter, [...activeFormats], []);
-}
-
-function renderPromptCards(filterFmt, formats, detectionTypes) {
+function scorePrompt(p, formats, detectionTypes) {
   const detSet = new Set(detectionTypes);
-  const scored = PROMPT_LIBRARY.map(p => {
-    let score = p.formats.length===0 ? 1 : 0;
-    if (p.formats.some(f=>formats.includes(f))) score = 3;
-    if (p.detectionTypes.some(d=>detSet.has(d))) score += 1;
-    return {...p, score};
-  });
-  let visible = filterFmt ? scored.filter(p=>p.formats.includes(filterFmt)||p.formats.length===0) : scored;
-  visible.sort((a,b)=>b.score-a.score||a.title.localeCompare(b.title));
-
-  $('promptCards').innerHTML = visible.map(p => {
-    const fmtTags = p.formats.map(f=>`<span class="ptag ptag-format">${FORMAT_LABELS[f]||f}</span>`).join('');
-    const detTags = p.detectionTypes.map(d=>`<span class="ptag ptag-detect">${d}</span>`).join('');
-    const otTags  = p.tags.map(t=>`<span class="ptag">${escHtml(t)}</span>`).join('');
-    const isRelevant = p.score>=2;
-    const isSelected = p.id===selectedPromptId;
-    return `<div class="prompt-card ${isSelected?'selected':''}" onclick="selectPrompt('${p.id}')" data-id="${p.id}">
-      <div class="prompt-card-header">
-        <span class="prompt-card-icon">${p.icon}</span>
-        <div class="prompt-card-meta">
-          <div class="prompt-card-title">${escHtml(p.title)}${isRelevant?'<span class="relevance-dot">●</span>':''}</div>
-          <div class="prompt-card-desc">${escHtml(p.desc)}</div>
-        </div>
-      </div>
-      <div class="prompt-card-tags">${fmtTags}${detTags}${otTags}</div>
-    </div>`;
-  }).join('');
+  let score = p.formats.length === 0 ? 1 : 0;
+  if (p.formats.some(f => formats.includes(f))) score = 3;
+  if (p.detectionTypes.some(d => detSet.has(d))) score += 1;
+  return score;
 }
 
-function selectPrompt(id) {
-  const p = PROMPT_LIBRARY.find(p=>p.id===id); if (!p) return;
-  selectedPromptId = id;
-  $('promptCards').querySelectorAll('.prompt-card').forEach(c=>c.classList.toggle('selected', c.dataset.id===id));
-  $('composerText').value = p.template;
-  if ($('injectEvidence').checked && lastResult && !lastResult.blocked) {
-    // Keep {{EVIDENCE}} as placeholder — preview resolves it
+function populatePromptSelect(formats, detectionTypes) {
+  const sel = $('promptSelect');
+  const currentVal = sel.value;
+
+  // Group prompts by category
+  const groups = [
+    { label: 'Nmap',           fmts: ['nmap'] },
+    { label: 'HTTP',           fmts: ['http_request','http_response'] },
+    { label: 'JSON / API',     fmts: ['json'] },
+    { label: 'LDAP / BloodHound', fmts: ['ldap'] },
+    { label: 'LinPEAS',        fmts: ['peas_linux'] },
+    { label: 'WinPEAS',        fmts: ['peas_windows'] },
+    { label: 'Generic',        fmts: [] },
+  ];
+
+  sel.innerHTML = '<option value="">— select a prompt template —</option>';
+
+  for (const group of groups) {
+    const prompts = PROMPT_LIBRARY.filter(p =>
+      group.fmts.length === 0
+        ? p.formats.length === 0
+        : p.formats.some(f => group.fmts.includes(f))
+    );
+    if (!prompts.length) continue;
+
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+
+    for (const p of prompts) {
+      const score = scorePrompt(p, formats, detectionTypes);
+      const relevant = score >= 2;
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = (relevant ? '● ' : '  ') + p.title;
+      if (relevant) opt.style.color = 'var(--green)';
+      optgroup.appendChild(opt);
+    }
+    sel.appendChild(optgroup);
   }
+
+  // Restore selection if still valid
+  if (currentVal && [...sel.options].some(o => o.value === currentVal)) {
+    sel.value = currentVal;
+  }
+}
+
+function onPromptSelect() {
+  const id = $('promptSelect').value;
+  if (!id) {
+    $('promptInfo').innerHTML = '';
+    return;
+  }
+  const p = PROMPT_LIBRARY.find(p => p.id === id);
+  if (!p) return;
+
+  selectedPromptId = id;
+  $('composerText').value = p.template;
+  $('promptInfo').innerHTML = `<span style="color:var(--text-mid)">${escHtml(p.desc)}</span>`;
+
+  // Switch to edit tab so user sees the loaded template
+  switchComposer('edit');
   updateComposerPreview();
 }
+
+// Called after sanitisation to update dropdown relevance indicators
+function renderPromptLibrary(formats, detectionTypes) {
+  activeFormats = new Set(formats);
+  populatePromptSelect(formats, detectionTypes);
+}
+
+// Kept for compatibility — no-op now that we use a dropdown
+function renderPromptCards() {}
+function filterPrompts() {}
 
 // ══════════════════════════════════════════════
 // COMPOSER

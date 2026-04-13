@@ -19,6 +19,7 @@ from store import (
     save_token_mappings, get_token_map,
     write_audit_log, get_audit_log,
     detokenise_text, write_detokenise_audit,
+    list_engagements, close_engagement,
 )
 
 # ─── Init ────────────────────────────────────────────────────────────────────
@@ -195,6 +196,26 @@ async def audit_log_all(limit: int = 50):
 @app.get("/api/audit-log/{engagement_id}")
 async def audit_log_engagement(engagement_id: str, limit: int = 50):
     return get_audit_log(engagement_id=engagement_id, limit=min(limit, 200))
+
+
+@app.get("/api/engagements")
+async def get_engagements():
+    """List all engagements with token counts and timestamps."""
+    return list_engagements()
+
+
+@app.delete("/api/engagement/{engagement_id}")
+async def close_engagement_endpoint(engagement_id: str):
+    """
+    Purge all token mappings for an engagement.
+    Audit log is retained. Salt file is deleted so old tokens cannot be reused.
+    """
+    deleted = close_engagement(engagement_id)
+    return {
+        "engagement_id": engagement_id,
+        "mappings_deleted": deleted,
+        "status": "closed",
+    }
 
 
 @app.get("/api/health")
