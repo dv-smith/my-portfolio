@@ -319,6 +319,101 @@ _PEAS_ENTROPY_WHITELIST = re.compile(
     re.IGNORECASE
 )
 
+# Public CDN and well-known URL patterns — never sensitive regardless of entropy.
+# Applied to both the KV secret detector (value side) and the entropy detector.
+_PUBLIC_URL_WHITELIST = re.compile(
+    r'(?:https?://)?(?:'
+    r'cdnjs\.cloudflare\.com'
+    r'|cdn\.jsdelivr\.net'
+    r'|unpkg\.com'
+    r'|ajax\.googleapis\.com'
+    r'|fonts\.googleapis\.com'
+    r'|fonts\.gstatic\.com'
+    r'|stackpath\.bootstrapcdn\.com'
+    r'|maxcdn\.bootstrapcdn\.com'
+    r'|code\.jquery\.com'
+    r'|cdn\.datatables\.net'
+    r'|cdn\.cloudflare\.com'
+    r'|static\.cloudflareinsights\.com'
+    r'|www\.google-analytics\.com'
+    r'|www\.googletagmanager\.com'
+    r'|connect\.facebook\.net'
+    r'|platform\.twitter\.com'
+    r')',
+    re.IGNORECASE
+)
+
+# IPs that are never client-identifying regardless of context.
+# Loopback, broadcast, unspecified, and documentation ranges.
+_SAFE_IPS = {
+    "127.0.0.1", "0.0.0.0", "255.255.255.255", "255.255.255.0",
+    "255.255.0.0", "255.0.0.0",
+    # Documentation ranges (RFC 5737)
+    "192.0.2.1", "198.51.100.1", "203.0.113.1",
+}
+
+# Standard HTTP request/response headers whose names or values are
+# never sensitive. The KV secret regex fires on these because they
+# contain words like "Insecure", "Auth" etc. in the header name.
+_SAFE_HTTP_HEADERS = {
+    # Request headers
+    "upgrade-insecure-requests",
+    "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "sec-fetch-user",
+    "content-type", "content-length", "content-encoding", "content-language",
+    "accept", "accept-language", "accept-encoding", "accept-charset",
+    "cache-control", "pragma", "connection", "keep-alive",
+    "x-requested-with", "te", "trailers", "transfer-encoding",
+    "origin", "referer", "host", "user-agent",
+    "if-modified-since", "if-none-match", "if-match",
+    "dnt", "priority",
+    # Response headers — version info is useful context for LLM, not sensitive
+    "server", "x-powered-by", "x-aspnet-version", "x-aspnetmvc-version",
+    "x-frame-options", "x-content-type-options", "x-xss-protection",
+    "strict-transport-security", "content-security-policy",
+    "access-control-allow-origin", "access-control-allow-methods",
+    "vary", "etag", "last-modified", "date", "expires",
+}
+
+# Filesystem paths that are tool infrastructure, not client data.
+# Values starting with these prefixes are never sensitive.
+_SAFE_PATH_PREFIXES = (
+    "/usr/share/wordlists/",
+    "/usr/share/seclists/",
+    "/usr/share/metasploit-framework/",
+    "/opt/metasploit/",
+    "/usr/bin/", "/usr/sbin/", "/bin/", "/sbin/",
+    "/usr/local/bin/",
+    "/var/www/html/",          # web roots being discussed as targets
+    "/etc/passwd", "/etc/hosts", "/etc/shadow", "/etc/group",
+)
+
+# Query parameter keys that are never sensitive — analytics, pagination,
+# display parameters. The value side is also safe by implication.
+_SAFE_QUERY_PARAMS = {
+    "biw", "bih", "opi", "ved", "uact", "sa", "source", "ei", "hl",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "page", "limit", "offset", "per_page", "sort", "order", "direction",
+    "format", "locale", "lang", "currency",
+    "hs_static_app", "hs_static_app_version",
+}
+
+# Known-safe value patterns for the KV detector —
+# ping/traceroute output fields, version strings, etc.
+_SAFE_KV_VALUE_RE = re.compile(
+    r'^(?:'
+    r'\d+\.\d+\.\d+\.\d+\s*\([^)]*\)'       # IP with hostname in parens
+    r'|\d+\s*bytes\s+from'                    # ping output
+    r'|icmp_seq=\d+'                          # ping sequence
+    r'|ttl=\d+'                               # ping TTL
+    r'|time=[\d.]+\s*ms'                      # ping time
+    r'|Apache/[\d.]+'                         # server version strings
+    r'|nginx/[\d.]+'
+    r'|PHP/[\d.]+'
+    r'|OpenSSL/[\d.]+'
+    r')$',
+    re.IGNORECASE
+)
+
 _COMMON_FALSE_POSITIVES = {
     "localhost", "example.com", "test.com", "null", "none", "true", "false",
     "00000000000000000000000000000000",  # empty NTLM hash
@@ -344,16 +439,16 @@ def has_mixed_charset(s: str) -> bool:
     return sum([has_lower, has_upper, has_digit, has_special]) >= 3
 
 
-def detect_high_entropy(text: str, is_peas: bool = False) -> list[tuple[str, float]]:
+def detect_high_entropy(text: str, is_peas: bool = False, cdn_spans: list | None = None) -> list[tuple[str, float]]:
     """Find high-entropy strings (≥20 chars, mixed charset, entropy ≥3.6).
 
     is_peas: when True, applies an additional whitelist pass to suppress
     architecture triplets, shared library names, and system paths that
     are structurally common in PEAS output but not client-identifying.
+    cdn_spans: list of (start, end) spans of known-public CDN URLs to skip.
     """
     hits = []
-    # Pre-collect UUIDs so we can skip them — they appear frequently in
-    # PEAS hardware/interface sections and are not client-identifying.
+    cdn_spans = cdn_spans or []
     uuid_spans = {m.span() for m in _RE_UUID.finditer(text)}
 
     for match in re.finditer(r"\b[A-Za-z0-9+/=_\-\.]{20,}\b", text):
@@ -362,16 +457,47 @@ def detect_high_entropy(text: str, is_peas: bool = False) -> list[tuple[str, flo
             continue
         if len(val) < 20:
             continue
-        # Skip if this span overlaps a UUID
+        # Skip if within a UUID span
         if any(s <= match.start() and match.end() <= e for s, e in uuid_spans):
+            continue
+        # Skip if within a CDN URL span
+        if any(s <= match.start() and match.end() <= e for s, e in cdn_spans):
             continue
         if not has_mixed_charset(val):
             continue
         entropy = compute_entropy(val)
         if entropy < 3.6:
             continue
+        # Skip strings that look like HTTP header names —
+        # e.g. "Upgrade-Insecure-Requests", "X-HubSpot-Static-App-Info"
+        # Header names contain only letters, digits, and hyphens — and always
+        # have at least one hyphen (distinguishes from base64/fingerprint values)
+        if '-' in val and re.match(r'^[A-Za-z][A-Za-z0-9\-]{18,}$', val):
+            continue
+        # Skip filesystem paths that are tool infrastructure
+        if '/' in val and any(
+            val.startswith(p.lstrip('/')) or val.startswith(p)
+            for p in _SAFE_PATH_PREFIXES
+        ):
+            continue
+        # Skip key=value strings where key is a safe query param or
+        # where value side is a safe filesystem path
+        if '=' in val:
+            eq_idx = val.index('=')
+            k = val[:eq_idx].lower().lstrip('_').lstrip('-')
+            v = val[eq_idx + 1:]
+            if k in _SAFE_QUERY_PARAMS:
+                continue
+            if '/' in v and any(
+                v.startswith(p.lstrip('/')) or v.startswith(p)
+                for p in _SAFE_PATH_PREFIXES
+            ):
+                continue
         # PEAS mode: suppress known-benign architecture/library strings
         if is_peas and _PEAS_ENTROPY_WHITELIST.match(val):
+            continue
+        # Always suppress public CDN / analytics URLs
+        if _PUBLIC_URL_WHITELIST.search(val):
             continue
         # Boost confidence if near a sensitivity keyword
         context_start = max(0, match.start() - 30)
@@ -394,6 +520,35 @@ def run_detections(text: str, formats: list[str] | None = None) -> list[Detectio
 
     detections = []
     seen_values = set()
+
+    # Pre-collect spans of public CDN/analytics URLs so detectors can skip
+    # matches that fall entirely within those spans. This prevents path
+    # fragments like "5.0/dist/css/bootstrap.min.css" being flagged as secrets.
+    _RE_FULL_URL = re.compile(
+        r'(?:https?://|//)?(?:'
+        r'cdnjs\.cloudflare\.com'
+        r'|cdn\.jsdelivr\.net'
+        r'|unpkg\.com'
+        r'|ajax\.googleapis\.com'
+        r'|fonts\.googleapis\.com'
+        r'|fonts\.gstatic\.com'
+        r'|stackpath\.bootstrapcdn\.com'
+        r'|maxcdn\.bootstrapcdn\.com'
+        r'|code\.jquery\.com'
+        r'|cdn\.datatables\.net'
+        r'|cdn\.cloudflare\.com'
+        r'|static\.cloudflareinsights\.com'
+        r'|www\.google-analytics\.com'
+        r'|www\.googletagmanager\.com'
+        r'|connect\.facebook\.net'
+        r'|platform\.twitter\.com'
+        r')[^\s\'"<>]*',
+        re.IGNORECASE
+    )
+    cdn_spans = [m.span() for m in _RE_FULL_URL.finditer(text)]
+
+    def in_cdn_span(start: int, end: int) -> bool:
+        return any(s <= start and end <= e for s, e in cdn_spans)
 
     def add(dtype, value, confidence, context=""):
         if value in seen_values or value.lower() in _COMMON_FALSE_POSITIVES:
@@ -421,9 +576,39 @@ def run_detections(text: str, formats: list[str] | None = None) -> list[Detectio
     for m in _RE_COOKIE.finditer(text):
         add("COOKIE", m.group(), 0.95)
 
-    # KV secrets
+    # KV secrets — skip if the value side is a public URL or within a CDN span,
+    # and skip known-safe header names, filesystem tool paths, and analytics params
     for m in _RE_KV_SECRET.finditer(text):
-        add("SECRET", m.group(), 0.95)
+        if in_cdn_span(m.start(), m.end()):
+            continue
+        val = m.group()
+        parts = re.split(r'[=:]\s*', val, maxsplit=1)
+        key_part   = parts[0].strip().lower().lstrip('-').lstrip('x-')
+        value_part = parts[-1].strip() if len(parts) > 1 else ''
+
+        # Skip standard HTTP headers
+        if key_part in _SAFE_HTTP_HEADERS:
+            continue
+        # Also check with X- prefix stripped
+        if key_part.replace('x-', '', 1) in _SAFE_HTTP_HEADERS:
+            continue
+        # Skip known-safe query parameter keys
+        base_key = key_part.split('[')[0].split('.')[0]  # handle array params
+        if base_key in _SAFE_QUERY_PARAMS:
+            continue
+        # Skip public URLs in value
+        if _PUBLIC_URL_WHITELIST.search(value_part):
+            continue
+        if value_part.startswith(('http://', 'https://', '//')):
+            continue
+        # Skip tool filesystem paths in value
+        if any(value_part.startswith(p) or ('/' + value_part).startswith(p)
+               for p in _SAFE_PATH_PREFIXES):
+            continue
+        # Skip known-safe value patterns
+        if _SAFE_KV_VALUE_RE.match(value_part):
+            continue
+        add("SECRET", val, 0.95)
 
     # Emails
     for m in _RE_EMAIL.finditer(text):
@@ -433,10 +618,19 @@ def run_detections(text: str, formats: list[str] | None = None) -> list[Detectio
     for m in _RE_PRIV_IP.finditer(text):
         add("PRIV_IP", m.group(), 0.99)
 
-    # Public IPs (lower confidence — could be docs)
+    # Public IPs — skip safe/loopback/broadcast addresses and anything
+    # already inside a tokenised cookie span (version numbers in CF tokens)
+    cookie_spans = [m.span() for m in _RE_COOKIE.finditer(text)]
     for m in _RE_PUB_IP.finditer(text):
-        if not _RE_PRIV_IP.match(m.group()):
-            add("PUB_IP", m.group(), 0.7)
+        ip = m.group()
+        if ip in _SAFE_IPS:
+            continue
+        if _RE_PRIV_IP.match(ip):
+            continue
+        # Skip IPs embedded inside cookie values — they're version segments
+        if any(s <= m.start() and m.end() <= e for s, e in cookie_spans):
+            continue
+        add("PUB_IP", ip, 0.7)
 
     # Hostnames (internal)
     for m in _RE_HOSTNAME.finditer(text):
@@ -451,9 +645,13 @@ def run_detections(text: str, formats: list[str] | None = None) -> list[Detectio
         if m.group(1):
             add("USER", m.group(1), 0.8)
 
-    # Domains
+    # Domains — skip public CDN and analytics domains
     for m in _RE_DOMAIN.finditer(text):
+        if in_cdn_span(m.start(), m.end()):
+            continue
         val = m.group()
+        if _PUBLIC_URL_WHITELIST.search(val):
+            continue
         if not any(d.value == val or val in d.value for d in detections):
             add("DOMAIN", val, 0.6)
 
@@ -494,7 +692,7 @@ def run_detections(text: str, formats: list[str] | None = None) -> list[Detectio
                 add("KERNEL", ver, 0.85, "custom kernel build string")
 
     # High-entropy strings — PEAS mode uses whitelist to suppress FPs
-    for val, entropy in detect_high_entropy(text, is_peas=is_peas):
+    for val, entropy in detect_high_entropy(text, is_peas=is_peas, cdn_spans=cdn_spans):
         if not any(d.value == val for d in detections):
             add("SECRET", val, min(entropy / 6.0, 1.0), f"entropy={entropy:.2f}")
 
@@ -587,9 +785,10 @@ def residual_risk(sanitised: str, formats: list[str] | None = None) -> tuple[str
 
     for m in _RESIDUAL_IP.finditer(scan_text):
         ip = m.group()
-        if ip not in ("0.0.0.0", "127.0.0.1", "255.255.255.0", "255.255.255.255"):
-            findings.append(f"residual_ip:{ip}")
-            reasons.append(f"Residual IP address: {ip}")
+        if ip in _SAFE_IPS:
+            continue
+        findings.append(f"residual_ip:{ip}")
+        reasons.append(f"Residual IP address: {ip}")
 
     for m in _RESIDUAL_HASH.finditer(scan_text):
         findings.append(f"residual_hash:{m.group()[:12]}…")
