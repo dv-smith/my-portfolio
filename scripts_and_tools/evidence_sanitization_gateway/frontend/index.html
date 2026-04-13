@@ -526,6 +526,52 @@ Output as a table: Service | Port | Risk | Test Approach
 {{EVIDENCE}}
 ---`
   },
+  // ── HTTP Pair ────────────────────────────────────────────────────────────
+  {
+    id:'http-pair-full', icon:'🔄', title:'HTTP Pair — Full Transaction Analysis',
+    desc:'Analyse a complete request/response pair. Reason across both sides to identify auth issues, data exposure, and logic flaws.',
+    formats:['http_pair'], detectionTypes:['AUTH_HEADER','COOKIE','SECRET'], tags:['web','OWASP','pair analysis'],
+    template:`You are a web application penetration tester reviewing a complete HTTP transaction.
+
+The evidence below contains both the request and the server's response, separated by a divider. Analyse the full transaction and identify:
+
+1. **Authentication & session handling** — what auth mechanism is in use, is it enforced, does the response reveal anything about the session state
+2. **Data exposure in the response** — sensitive fields returned, over-permissive data, internal identifiers visible to the client
+3. **Injection points** — parameters in the request that should be fuzz-tested (SQLi, SSTI, XXE, command injection)
+4. **Security header posture** — headers present or absent in the response that affect browser security
+5. **Business logic observations** — anything in the request/response relationship that suggests access control issues, IDOR, or unexpected behaviour
+6. **Recommended next steps** — 3-5 specific follow-up tests based on what you see
+
+Cross-reference both sides: what was sent vs. what came back tells a more complete story than either alone.
+
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [USER_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
+
+--- HTTP TRANSACTION ---
+{{EVIDENCE}}
+---`
+  },
+  {
+    id:'http-pair-auth', icon:'🔐', title:'HTTP Pair — Auth Flow Analysis',
+    desc:'Focus on the authentication exchange. What was sent, what came back, and what it reveals about the auth implementation.',
+    formats:['http_pair'], detectionTypes:['AUTH_HEADER','COOKIE','SECRET'], tags:['web','auth','session','pair analysis'],
+    template:`You are a penetration tester analysing an HTTP authentication exchange.
+
+Review the following request/response pair and focus specifically on the authentication and session management:
+
+1. **Auth mechanism identification** — what type of auth is in use (session cookie, JWT, Basic, OAuth token, API key, custom header)
+2. **Token characteristics** — from the response, what can you infer about token structure, entropy, or predictability
+3. **Cookie security attributes** — examine Set-Cookie headers in the response for HttpOnly, Secure, SameSite, expiry
+4. **Session lifecycle** — does the response issue a new token, rotate an existing one, or reuse the same credential
+5. **Auth bypass indicators** — does the response return data that suggests the auth check could be bypassed or is loosely enforced
+6. **Attack vectors** — given what you see in both halves, what auth attacks are most promising (CSRF, session fixation, token replay, brute force)
+
+IMPORTANT: Sensitive values have been replaced with tokens in the format [TYPE_xxxxxxxx] (e.g. [COOKIE_95f17a67], [AUTH_ab12cd34]). Preserve these tokens exactly as they appear — do not shorten, modify, or substitute wildcards like [COOKIE_*]. The analyst will use the exact token strings to restore original values locally.
+
+--- HTTP TRANSACTION ---
+{{EVIDENCE}}
+---`
+  },
+
   {
     id:'http-vuln', icon:'🌐', title:'HTTP — Vulnerability Review',
     desc:'Review HTTP traffic for injection points, auth issues, and misconfigs.',
@@ -1151,7 +1197,7 @@ window.addEventListener('load', () => {
 // ══════════════════════════════════════════════
 // PROMPT LIBRARY — DROPDOWN
 // ══════════════════════════════════════════════
-const FORMAT_LABELS = { nmap:'Nmap', secretsdump:'secretsdump', http_request:'HTTP Req', http_response:'HTTP Resp', json:'JSON', ldap:'LDAP/BloodHound', peas_linux:'LinPEAS', peas_windows:'WinPEAS' };
+const FORMAT_LABELS = { nmap:'Nmap', secretsdump:'secretsdump', http_request:'HTTP Req', http_response:'HTTP Resp', http_pair:'HTTP Pair', json:'JSON', ldap:'LDAP/BloodHound', peas_linux:'LinPEAS', peas_windows:'WinPEAS' };
 
 function scorePrompt(p, formats, detectionTypes) {
   const detSet = new Set(detectionTypes);

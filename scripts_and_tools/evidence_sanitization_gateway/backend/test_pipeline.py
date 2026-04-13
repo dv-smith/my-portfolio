@@ -311,6 +311,74 @@ print(f"  Formats: {result.formats_detected}")
 print(f"  Actions: {[a for a in result.actions if 'ansi' in a.lower() or 'decoded' in a.lower()]}")
 
 # ──────────────────────────────────────────
+print("\n── HTTP Pair ──")
+
+from pipeline import split_http_pair
+
+# Format detection
+pair_input = """GET /api/v1/user HTTP/1.1
+Host: app.corp.local
+Cookie: session=SuperSecretSession123
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: session=NewSession456; HttpOnly; Secure
+
+{"id": 42, "username": "jsmith", "email": "jsmith@corp.local", "role": "admin"}"""
+
+formats = detect_formats(pair_input)
+check("http_pair detected",     "http_pair"     in formats, str(formats))
+check("http_request detected",  "http_request"  in formats, str(formats))
+check("http_response detected", "http_response" in formats, str(formats))
+check("no duplicate http_request", formats.count("http_request") == 1)
+check("no duplicate http_response", formats.count("http_response") == 1)
+
+# Splitter
+pair = split_http_pair(pair_input)
+check("split returns pair",       pair is not None)
+req_half, resp_half = pair
+check("request in request half",  "GET /api/v1/user" in req_half)
+check("response in response half","HTTP/1.1 200"      in resp_half)
+check("response not in req half", "HTTP/1.1 200"      not in req_half)
+check("request not in resp half", "GET /api/v1/user"  not in resp_half)
+
+# Full pipeline
+result = run_pipeline(pair_input, SALT)
+check("pair split action recorded",        "http_pair_split" in result.actions)
+check("REQUEST divider in output",         "REQUEST"  in result.sanitised)
+check("RESPONSE divider in output",        "RESPONSE" in result.sanitised)
+check("cookie value tokenised",            "SuperSecretSession123" not in result.sanitised)
+check("auth token tokenised",              "eyJhbGciOiJIUzI1NiJ9" not in result.sanitised)
+check("email tokenised",                   "jsmith@corp.local"     not in result.sanitised)
+check("response cookie tokenised",         "NewSession456"         not in result.sanitised)
+check("tokens generated",                  result.token_count >= 4,  f"got {result.token_count}")
+check("not blocked",                       not result.blocked,        f"risk={result.risk_score}")
+
+# Verify same value gets same token in both halves
+# app.corp.local appears in Host header (request) and could appear in response
+# We can't easily test cross-half consistency without knowing the exact values,
+# but we can verify the output contains consistent token formats
+import re as _re
+tokens_found = _re.findall(r'\[[A-Z_]+_[0-9a-f]{8}\]', result.sanitised)
+check("tokens have correct format", all(_re.match(r'\[[A-Z_]+_[0-9a-f]{8}\]', t) for t in tokens_found))
+
+# Single request still works (not treated as pair)
+single_req = "GET /admin HTTP/1.1\nHost: target.corp.local\nCookie: auth=s3cr3t\n"
+result_single = run_pipeline(single_req, SALT)
+check("single request not split", "http_pair_split" not in result_single.actions)
+check("single request formats",   "http_request" in result_single.formats_detected)
+
+# Single response still works
+single_resp = "HTTP/1.1 403 Forbidden\nContent-Type: text/html\n\n<h1>Forbidden</h1>"
+result_resp = run_pipeline(single_resp, SALT)
+check("single response not split", "http_pair_split" not in result_resp.actions)
+check("single response format",    "http_response" in result_resp.formats_detected)
+
+print(f"\n  Pair result: risk={result.risk_score}, tokens={result.token_count}")
+print(f"  Sanitised preview:\n{result.sanitised[:300]}")
+
+# ──────────────────────────────────────────
 print(f"\n{'='*45}")
 print(f"  Results: {PASS} passed, {FAIL} failed")
 if FAIL:

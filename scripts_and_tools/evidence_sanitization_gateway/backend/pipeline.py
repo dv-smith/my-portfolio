@@ -151,11 +151,20 @@ def detect_formats(text: str) -> list[str]:
         except Exception:
             pass
 
-    # HTTP traffic
-    if re.search(r"^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS) .+ HTTP/\d", text, re.MULTILINE):
+    # HTTP traffic — detect request, response, or pair
+    # Pair detection takes priority: when both are present the splitter
+    # runs separately on each half so tokens are consistent across both sides.
+    _has_req  = bool(re.search(r"^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS) .+ HTTP/\d", text, re.MULTILINE))
+    _has_resp = bool(re.search(r"^HTTP/\d[\d.]* \d{3}", text, re.MULTILINE))
+    if _has_req and _has_resp:
+        formats.append("http_pair")
         formats.append("http_request")
-    if re.search(r"^HTTP/\d\.\d \d{3}", text, re.MULTILINE):
         formats.append("http_response")
+    else:
+        if _has_req:
+            formats.append("http_request")
+        if _has_resp:
+            formats.append("http_response")
 
     # Nmap
     if "Nmap scan report for" in text or "PORT   STATE" in text:
@@ -191,7 +200,36 @@ def detect_formats(text: str) -> list[str]:
     return formats
 
 
-def extract_json_values(text: str) -> list[tuple[str, str]]:
+def split_http_pair(text: str) -> tuple[str, str] | None:
+    """
+    Split a combined HTTP request+response into (request_text, response_text).
+    The split point is the first HTTP status line (HTTP/x.x NNN ...).
+    Returns None if the text doesn't contain a clear pair.
+
+    Strategy: find the response status line. Everything before it is the
+    request; everything from the status line onward is the response.
+    We skip the first line if it IS the request line to avoid false matches.
+    """
+    lines = text.splitlines(keepends=True)
+    response_start_idx = None
+
+    for i, line in enumerate(lines):
+        # HTTP status line: HTTP/1.1 200 OK  or  HTTP/2 200
+        if re.match(r'^HTTP/[\d.]+ \d{3}', line):
+            response_start_idx = i
+            break
+
+    if response_start_idx is None:
+        return None
+
+    request_text  = "".join(lines[:response_start_idx]).rstrip()
+    response_text = "".join(lines[response_start_idx:]).strip()
+
+    # Sanity check — request part should contain a request line
+    if not re.search(r'^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS) .+ HTTP/\d', request_text, re.MULTILINE):
+        return None
+
+    return request_text, response_text
     """Recursively walk JSON and yield (key, value) leaf pairs."""
     results = []
 
@@ -611,18 +649,82 @@ def run_pipeline(raw_text: str, salt: bytes) -> PipelineResult:
     # Stage 2: Structured parsing / format detection
     result.formats_detected = detect_formats(text)
 
+    # ── HTTP pair handling ──────────────────────────────────────────────────
+    # If we detected a request+response pair, process each half separately
+    # with the same salt so tokens are consistent across both sides, then
+    # reassemble into a clearly labelled combined output.
+    if "http_pair" in result.formats_detected:
+        pair = split_http_pair(text)
+        if pair:
+            req_text, resp_text = pair
+            result.actions.append("http_pair_split")
+
+            # Process request half
+            req_dets  = run_detections(req_text,  formats=result.formats_detected)
+            req_san, req_dets  = tokenise(req_text,  req_dets,  salt)
+
+            # Process response half — detections against response only
+            resp_dets = run_detections(resp_text, formats=result.formats_detected)
+            # Remove any values already tokenised in the request to avoid
+            # double-tokenisation of the same value
+            req_values = {d.value for d in req_dets}
+            resp_dets_new = [d for d in resp_dets if d.value not in req_values]
+            # For values seen in both halves, reuse existing tokens
+            resp_shared = [d for d in resp_dets if d.value in req_values]
+            for d in resp_shared:
+                matching = next((r for r in req_dets if r.value == d.value), None)
+                if matching:
+                    d.token = matching.token
+            resp_san, resp_dets_new = tokenise(resp_text, resp_dets_new, salt)
+            # Re-apply shared tokens to response text
+            for d in resp_shared:
+                resp_san = resp_san.replace(d.value, d.token)
+
+            # Combine with clear divider
+            sanitised = (
+                "━━━ REQUEST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                + req_san
+                + "\n\n━━━ RESPONSE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                + resp_san
+            )
+
+            all_detections = req_dets + resp_dets_new + resp_shared
+            # Deduplicate by token
+            seen_tokens = set()
+            deduped = []
+            for d in all_detections:
+                if d.token not in seen_tokens:
+                    seen_tokens.add(d.token)
+                    deduped.append(d)
+
+            result.detections  = deduped
+            result.token_count = len(deduped)
+
+            risk, reasons, findings = residual_risk(sanitised, formats=result.formats_detected)
+            result.risk_score      = risk
+            result.risk_reasons    = reasons
+            result.residual_findings = findings
+
+            if risk == "HIGH":
+                result.blocked = True
+                result.actions.append("BLOCKED:high_residual_risk")
+
+            result.sanitised = sanitised
+            return result
+    # ── End pair handling ───────────────────────────────────────────────────
+
     # Stage 3: Heuristic detection (format-aware)
     detections = run_detections(text, formats=result.formats_detected)
 
     # Stage 4: Tokenisation
     sanitised, detections = tokenise(text, detections, salt)
-    result.detections = detections
+    result.detections  = detections
     result.token_count = len(detections)
 
     # Stage 5: Residual risk analysis (format-aware threshold)
     risk, reasons, findings = residual_risk(sanitised, formats=result.formats_detected)
-    result.risk_score = risk
-    result.risk_reasons = reasons
+    result.risk_score      = risk
+    result.risk_reasons    = reasons
     result.residual_findings = findings
 
     # Block HIGH risk by default

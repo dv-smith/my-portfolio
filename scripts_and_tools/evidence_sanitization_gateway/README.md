@@ -165,7 +165,7 @@ The audit log entries are retained. Do this only when you no longer need to deto
 ### Sanitising artefacts
 
 1. Set an engagement ID in the header
-2. Paste raw artefact output into the left panel, or use the Upload button
+2. Paste raw artefact output into the left panel, or use the Upload button — for HTTP traffic, paste the full request and response together (Burp Suite copy as text) and the tool will detect and process them as a pair
 3. Click **▶ Sanitise**
 4. Review the risk score, detected formats, and token count
 5. Check the **Detections** tab to see what was found and tokenised
@@ -200,6 +200,7 @@ Restored output contains real sensitive data and is never written to disk. Handl
 | Nmap | `Nmap scan report for`, `PORT   STATE` headers |
 | HTTP request | `GET/POST/… HTTP/x` request line |
 | HTTP response | `HTTP/x.x 200` status line |
+| HTTP pair | Request line + status line in same input — processed as a unit |
 | JSON / API | Valid JSON object or array |
 | LDAP / BloodHound | `CN=`, `OU=`, `DC=` distinguished name patterns |
 | LinPEAS | `╔══╗` box headers, `[+]`/`[!]`/`[*]` markers, `Linux version` |
@@ -290,6 +291,7 @@ Stored: timestamp, input_sha256, input_size, formats_detected, token_count, risk
 | Format | Prompts |
 |---|---|
 | Nmap | Attack Surface Summary, Vulnerability Mapping |
+| HTTP Pair | Full Transaction Analysis, Auth Flow Analysis |
 | HTTP | Vulnerability Review, Auth & Session Analysis |
 | JSON / API | Response Analysis |
 | LDAP / BloodHound | Path Analysis |
