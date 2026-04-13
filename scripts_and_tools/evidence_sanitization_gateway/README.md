@@ -111,7 +111,7 @@ pip install -r requirements.txt
 
 Then open **http://127.0.0.1:8000**
 
-On Windows, or if you prefer to skip the shell script:
+Or if you prefer to skip the shell script:
 
 ```bash
 cd backend
