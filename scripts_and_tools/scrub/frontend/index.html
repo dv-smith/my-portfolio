@@ -900,13 +900,52 @@ function renderResult(data) {
     $('outputStatus').textContent = data.override_applied?'OVERRIDE':'ALLOWED';
     $('outputStatus').className   = 'risk-value '+(data.override_applied?'risk-MEDIUM':'risk-neutral');
     $('blockedBanner').style.display='none';
-    $('outputText').textContent = data.sanitised;
+    renderSanitisedOutput(data.sanitised, data.detections);
     $('exportBar').style.display='flex';
   }
 
   renderDetections(data.detections);
   renderDiff(lastInput, data.sanitised, data.detections);
   renderActions(data.actions);
+}
+
+const TOKEN_COLOURS = {
+  PRIV_IP:'var(--amber)', PUB_IP:'var(--amber)',
+  NTLM:'var(--red)', NTLM_HASH:'var(--red)', HASH:'var(--red)',
+  SECRET:'#ff6b9d', AUTH:'#ff6b9d', AUTH_HEADER:'#ff6b9d', COOKIE:'#ff6b9d',
+  HOST:'var(--accent)', HOSTNAME:'var(--accent)', DOMAIN:'var(--accent)',
+  EMAIL:'#a78bfa', USER:'#a78bfa',
+  LDAP:'#34d399', LDAP_DN:'#34d399',
+  KERNEL:'var(--text-mid)', SSH_FP:'var(--text-mid)', MAC:'var(--text-mid)',
+  CUSTOM:'var(--purple)', REDACTED_BLOCK:'var(--amber)',
+  JWT:'#ff6b9d', PASSWORD:'var(--red)', SESSION:'#ff6b9d',
+  FILE_PATH:'var(--text-mid)', PATH_TRAV:'var(--red)',
+};
+
+function renderSanitisedOutput(sanitised, detections) {
+  // Build token → colour map from detections
+  const tokenColour = {};
+  for (const d of detections) {
+    const col = TOKEN_COLOURS[d.type] || TOKEN_COLOURS[d.type.replace(/_HASH$/,'')] || 'var(--accent)';
+    tokenColour[d.token] = col;
+  }
+  // Also parse prefix from any token not in detections
+  function colourFromToken(tok) {
+    if (tokenColour[tok]) return tokenColour[tok];
+    const m = tok.match(/^\[([A-Z_]+)_[0-9a-f]{8}\]$/);
+    if (!m) return 'var(--accent)';
+    const prefix = m[1];
+    return TOKEN_COLOURS[prefix] || 'var(--accent)';
+  }
+
+  const TOKEN_RE = /(\[[A-Z_]+_[0-9a-f]{8}\]|\[REDACTED_BLOCK\])/g;
+  const parts = sanitised.split(TOKEN_RE);
+  const html = parts.map((part, i) => {
+    if (i % 2 === 0) return escHtml(part);
+    const colour = colourFromToken(part);
+    return `<span style="color:${colour};background:${colour}18;border:1px solid ${colour}33;border-radius:2px;padding:0 3px;font-size:11px">${escHtml(part)}</span>`;
+  }).join('');
+  $('outputText').innerHTML = html;
 }
 
 function renderDetections(dets) {
