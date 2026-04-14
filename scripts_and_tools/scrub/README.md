@@ -36,7 +36,7 @@ cd sanitiser/backend && python main.py
 
 ### Workflow in three steps
 
-1. Set an engagement ID in the header. Add any client-specific keywords via **Keywords**.
+1. Set an engagement ID in the header. Click **Client** to enter client details — name variations are registered as keywords automatically and the report context field is pre-filled. Add any additional keywords via **Keywords**.
 2. Paste a raw artefact → **▶ Sanitise** → review the risk score and detections.
 3. Switch to **Report** or **Query** mode in the right panel → add context → **Copy Prompt** → paste into your LLM.
 
@@ -197,6 +197,8 @@ Restored output is never written to disk or the audit log.
 
 **Engagement ID** — set in the header before starting work. Use a consistent ID for the full engagement (e.g. `client-acme-2025`). All token mappings, audit records, and the HMAC salt are scoped to this ID. Tokens from one engagement cannot be detokenised under another.
 
+**Client profile** — click the Client button to set identifying information for the engagement: full legal name, short/trading name, domain, NetBIOS, assessment type, assessor/firm, and period. On save, name variations are automatically registered as custom keywords and the report context field is pre-filled if empty. Stored per-engagement and purged on close.
+
 **Custom keywords** — client-specific terms added via the Keywords button. Applied to every sanitise run for that engagement. Useful for internal application names, service account prefixes, codenames, or anything that identifies the client but would not match a generic pattern. Stored per-engagement in the local database.
 
 **Close engagement** — permanently deletes all token mappings and the engagement salt for that ID. Audit log is retained. Existing tokens cannot be reversed after this point. No undo.
@@ -282,6 +284,8 @@ All endpoints bind to `127.0.0.1:8000`. CORS restricted to `localhost` and `127.
 | `GET` | `/api/engagement/{id}/keywords` | List custom keywords |
 | `POST` | `/api/engagement/{id}/keywords` | Add a custom keyword |
 | `DELETE` | `/api/engagement/{id}/keywords/{keyword}` | Remove a custom keyword |
+| `GET` | `/api/engagement/{id}/client` | Get client profile |
+| `POST` | `/api/engagement/{id}/client` | Save client profile |
 | `GET` | `/api/token-map/{engagement_id}` | Decrypted token → original mappings |
 | `GET` | `/api/audit-log` | All audit records (latest 50) |
 | `GET` | `/api/audit-log/{engagement_id}` | Audit records for one engagement |
