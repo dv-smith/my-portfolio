@@ -1,0 +1,10 @@
+backend/data/
+backend/__pycache__/
+frontend/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+frontend/ESG_CONTEXT_PACK.md
+ESG_CONTEXT_PACK.md
+*.key
+*.bin
