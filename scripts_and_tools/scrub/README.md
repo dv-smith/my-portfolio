@@ -1,22 +1,42 @@
 # scrub
 
-> **This tool provides risk reduction, not anonymisation.** scrub removes direct identifiers — hostnames, IPs, credentials, account names. It does not prevent a capable LLM from inferring contextual information from structure or content that survives sanitisation. Use it to eliminate accidental exposure of specific client data, not as a guarantee of complete confidentiality.
+> **This tool provides risk reduction, not anonymisation.** scrub removes direct identifiers such as hostnames, IPs, credentials, and account names. It does not prevent a capable LLM from inferring context from structure or content that remains after sanitisation. Use it to reduce accidental exposure of client data, not as a guarantee of complete confidentiality.
 
 ---
 
 ## TL;DR
 
-Pentest artefacts contain client-identifying data. Pasting them into an external LLM is a data handling problem.
+scrub is a local-first sanitisation layer for LLM-assisted pentest reporting. It tokenises sensitive data (IPs, creds, hostnames, etc.), sends only safe output to the LLM, then detokenises responses locally — producing ready-to-use findings without exposing client data.
 
-scrub sits in front of that. Paste your raw artefact in — Nmap output, HTTP captures, secretsdump, LinPEAS, LDAP dumps, JSON responses — and it strips the sensitive values locally before anything leaves the machine. IPs, hostnames, credentials, hashes, and account names are replaced with deterministic opaque tokens. The token map stays local and encrypted.
+---
 
-The primary use case is **report writing**. After sanitisation, the built-in prompt composer assembles a structured prompt targeting your report format — description, recommendation, and suggested field values — ready to copy into whatever LLM you use. Paste the response back into scrub to detokenise, restoring real values locally before it goes into your report.
+## Why this exists
 
-There is also a **query mode** for free-form questions against the sanitised artefact — useful for quick triage or lateral movement analysis without structuring it as a finding.
+LLMs are becoming part of the pentest workflow, especially for report writing. They save time, improve structure, and help standardise output.
+
+The problem is that pentest artefacts contain sensitive client data. Pasting raw output into an external LLM risks exposing IPs, credentials, internal infrastructure, and other identifying details.
+
+In practice, people already do this. The trade-off is speed versus risk.
+
+scrub exists to remove that trade-off. It allows you to use LLMs for reporting without sending real client data outside your machine.
+
+---
+
+## What it does
+
+**scrub sits between your raw artefacts and the LLM.** Paste your input — Nmap output, HTTP captures, secretsdump, LinPEAS, LDAP dumps, JSON responses — and sensitive values are stripped locally before anything leaves the machine. IPs, hostnames, credentials, hashes, and account names are replaced with deterministic opaque tokens. The token map stays local and encrypted.
+
+The primary use case is **report writing**. After sanitisation, the built-in prompt composer assembles a structured prompt targeting your report format — description, recommendation, and suggested field values — ready to copy into your LLM. Paste the response back into scrub to detokenise and restore real values locally before adding it to your report.
+
+There is also a **query mode** for free-form questions against the sanitised artefact — useful for triage or lateral movement analysis without structuring it as a finding.
 
 **What scrub is not:** a prompt library, an analysis engine, or an LLM wrapper. It is a sanitisation layer with a prompt export step. The LLM call happens in your own tool.
 
-### Quick start
+---
+
+## Quick start
+
+**Requirements:** Python 3.11 or 3.12
 
 ```bash
 cd sanitiser
@@ -34,15 +54,19 @@ chmod +x start.sh
 cd sanitiser/backend && python main.py
 ```
 
-### Workflow in three steps
+On first run `backend/data/` is created automatically (mode 700). The Fernet encryption key and per-engagement salt files are written with mode 600. Back these up if token map recovery matters for an active engagement — losing the key makes all stored mappings unrecoverable.
+
+---
+
+## Workflow in three steps
 
 1. Set an engagement ID in the header. Click **Client** to enter client details — name variations are registered as keywords automatically and the report context field is pre-filled. Add any additional keywords via **Keywords**.
 2. Paste a raw artefact → **▶ Sanitise** → review the risk score and detections.
 3. Switch to **Report** or **Query** mode in the right panel → add context → **Copy Prompt** → paste into your LLM.
 
-When you get the LLM response back, switch to **← Detokenise**, paste the response in, and real values are restored locally from the encrypted token store.
+When the LLM response returns, switch to **← Detokenise**, paste it in, and real values are restored locally from the encrypted token store.
 
-When the engagement is done, click **Close** to permanently purge all token mappings and the engagement salt.
+When the engagement is complete, click **Close** to permanently purge all token mappings and the engagement salt.
 
 ---
 
@@ -201,7 +225,7 @@ Restored output is never written to disk or the audit log.
 
 **Custom keywords** — client-specific terms added via the Keywords button. Applied to every sanitise run for that engagement. Useful for internal application names, service account prefixes, codenames, or anything that identifies the client but would not match a generic pattern. Stored per-engagement in the local database.
 
-**Close engagement** — permanently deletes all token mappings and the engagement salt for that ID. Audit log is retained. Existing tokens cannot be reversed after this point. No undo.
+**Close engagement** — permanently deletes all token mappings, the client profile, custom keywords, and the engagement salt for that ID. Audit log is retained. No undo.
 
 ---
 
@@ -225,7 +249,7 @@ Runtime data written to `backend/data/` on first run:
 
 ```
 backend/data/
-├── sanitiser.db           # SQLite: token_mappings, audit_log, custom_keywords
+├── sanitiser.db           # SQLite: token_mappings, audit_log, custom_keywords, client_profile
 ├── sanitiser.key          # Fernet symmetric key (mode 600)
 └── salt_<engagement>.bin  # Per-engagement HMAC salt (mode 600)
 ```
@@ -246,11 +270,11 @@ These files are excluded from git via `.gitignore`. Do not commit them. Back up 
 - Every run is auditable without storing the underlying data (SHA-256 hash only)
 - Override of a HIGH block requires written justification, logged
 - Detokenised output is never persisted anywhere
-- Engagement close-out permanently purges mappings and the engagement salt
+- Engagement close-out permanently purges mappings, client profile, keywords, and the engagement salt
 
 **What scrub does not guarantee:**
 
-- **Anonymisation** — direct identifiers are removed. Context, structure, and naming conventions in the artefact may still allow inference of the client. This is a tool for eliminating accidental credential exposure, not formal anonymisation.
+- **Anonymisation** — direct identifiers are removed. Context, structure, and naming conventions in the artefact may still allow inference of the client.
 - **Complete detection coverage** — heuristic detectors handle common pentest artefact formats well. Novel or obfuscated output may not be fully sanitised. The safety gate provides a second check but is not exhaustive.
 - **Protection against a compromised local machine** — the Fernet key is a file on disk. An attacker with filesystem access can read both the key and the encrypted mappings.
 
@@ -280,7 +304,7 @@ All endpoints bind to `127.0.0.1:8000`. CORS restricted to `localhost` and `127.
 | `POST` | `/api/sanitise` | Run the full pipeline on raw input |
 | `POST` | `/api/detokenise` | Restore tokens in LLM output to real values |
 | `GET` | `/api/engagements` | List engagements with token counts |
-| `DELETE` | `/api/engagement/{id}` | Close engagement — purge mappings and salt |
+| `DELETE` | `/api/engagement/{id}` | Close engagement — purge mappings, profile, keywords, and salt |
 | `GET` | `/api/engagement/{id}/keywords` | List custom keywords |
 | `POST` | `/api/engagement/{id}/keywords` | Add a custom keyword |
 | `DELETE` | `/api/engagement/{id}/keywords/{keyword}` | Remove a custom keyword |
@@ -291,30 +315,6 @@ All endpoints bind to `127.0.0.1:8000`. CORS restricted to `localhost` and `127.
 | `GET` | `/api/audit-log/{engagement_id}` | Audit records for one engagement |
 | `GET` | `/api/health` | Liveness check |
 | `GET` | `/api/docs` | Auto-generated OpenAPI docs |
-
-**POST /api/sanitise**
-
-```json
-{
-  "text": "...",
-  "engagement_id": "client-acme-2025",
-  "override_block": false,
-  "override_reason": null
-}
-```
-
-`override_block: true` requires a non-empty `override_reason`. The justification is logged.
-
-**POST /api/detokenise**
-
-```json
-{
-  "text": "LLM response referencing [PRIV_IP_3a7f1b9c] ...",
-  "engagement_id": "client-acme-2025"
-}
-```
-
-Returns `restored` text, `substitution_count`, and `unresolved_tokens`.
 
 ---
 
