@@ -21,6 +21,7 @@ from store import (
     detokenise_text, write_detokenise_audit,
     list_engagements, close_engagement,
     add_custom_keyword, get_custom_keywords, delete_custom_keyword,
+    save_client_profile, get_client_profile,
 )
 
 # ─── Init ────────────────────────────────────────────────────────────────────
@@ -260,6 +261,32 @@ async def remove_keyword(engagement_id: str, keyword: str):
     """Remove a custom keyword from an engagement."""
     deleted = delete_custom_keyword(engagement_id, keyword)
     return {"engagement_id": engagement_id, "keyword": keyword, "deleted": deleted}
+
+
+class ClientProfileModel(BaseModel):
+    full_name:       str = Field(default="", max_length=200)
+    short_name:      str = Field(default="", max_length=100)
+    domain:          str = Field(default="", max_length=200)
+    netbios:         str = Field(default="", max_length=100)
+    assessment_type: str = Field(default="", max_length=100)
+    assessor:        str = Field(default="", max_length=200)
+    period:          str = Field(default="", max_length=100)
+
+
+@app.get("/api/engagement/{engagement_id}/client")
+async def get_client(engagement_id: str):
+    """Return client profile for an engagement."""
+    profile = get_client_profile(engagement_id)
+    if profile is None:
+        return {"engagement_id": engagement_id, "profile": None}
+    return {"engagement_id": engagement_id, "profile": profile}
+
+
+@app.post("/api/engagement/{engagement_id}/client")
+async def save_client(engagement_id: str, body: ClientProfileModel):
+    """Save client profile for an engagement."""
+    save_client_profile(engagement_id, body.dict())
+    return {"engagement_id": engagement_id, "saved": True}
 
 
 @app.get("/api/health")

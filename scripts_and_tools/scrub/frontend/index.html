@@ -267,6 +267,7 @@
       <div class="eng-row">
         <input class="eng-input" id="engagementId" type="text" value="" placeholder="e.g. client-acme-2025" oninput="onEngagementChange()">
         <button class="btn-close-eng" onclick="openKeywordsModal()" title="Manage custom sensitive keywords for this engagement" style="border-color:var(--purple);color:var(--purple)">Keywords</button>
+        <button class="btn-close-eng" onclick="openClientModal()" title="Set client details for this engagement" style="border-color:var(--accent);color:var(--accent)">Client</button>
         <button class="btn-close-eng" onclick="confirmCloseEngagement()" title="Purge all token mappings for this engagement">Close</button>
       </div>
       <span class="eng-warn" id="engWarn">⚠ Set an engagement ID before sanitising</span>
@@ -291,6 +292,65 @@
     </div>
     <div style="display:flex;justify-content:flex-end">
       <button class="btn btn-secondary" onclick="$('keywordsModal').style.display='none'">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client profile modal -->
+<div id="clientModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-panel);border:1px solid var(--accent);padding:24px;max-width:520px;width:90%;font-family:var(--mono);">
+    <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:0.05em">CLIENT PROFILE</div>
+    <div style="font-size:11px;color:var(--text-mid);line-height:1.7;margin-bottom:16px">
+      Name variations are automatically added as custom keywords.<br>
+      Engagement: <strong id="clientModalEngId" style="color:var(--accent)"></strong>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Full Legal Name</div>
+        <input class="override-input" id="cpFullName" placeholder="Acme Corporation" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Short / Trading Name</div>
+        <input class="override-input" id="cpShortName" placeholder="Acme" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Domain</div>
+        <input class="override-input" id="cpDomain" placeholder="acme.com" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">NetBIOS / Short Domain</div>
+        <input class="override-input" id="cpNetbios" placeholder="ACME" style="width:100%">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Assessment Type</div>
+        <select class="override-input" id="cpAssessmentType" style="width:100%;cursor:pointer">
+          <option value="">— select —</option>
+          <option>Internal Network</option>
+          <option>External Network</option>
+          <option>Web Application</option>
+          <option>Active Directory</option>
+          <option>Red Team</option>
+          <option>Wireless</option>
+          <option>Physical</option>
+          <option>Social Engineering</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Assessor / Firm</div>
+        <input class="override-input" id="cpAssessor" placeholder="NCC Group" style="width:100%">
+      </div>
+      <div style="grid-column:1/-1">
+        <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Assessment Period</div>
+        <input class="override-input" id="cpPeriod" placeholder="January 2025" style="width:100%">
+      </div>
+    </div>
+
+    <div id="cpStatus" style="font-size:10px;color:var(--text-dim);min-height:16px;margin-bottom:12px"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="$('clientModal').style.display='none'">Cancel</button>
+      <button class="btn" onclick="saveClientProfile()">Save</button>
     </div>
   </div>
 </div>
@@ -947,6 +1007,113 @@ function clearComposer() {
 }
 
 // ══════════════════════════════════════════════
+// CLIENT PROFILE
+// ══════════════════════════════════════════════
+async function openClientModal() {
+  const id = engagementId();
+  if (!id || id === 'default') { alert('Set an engagement ID first.'); return; }
+  $('clientModalEngId').textContent = id;
+  $('cpStatus').textContent = '';
+  $('clientModal').style.display = 'flex';
+  // Load existing profile if any
+  try {
+    const resp = await fetch(`/api/engagement/${encodeURIComponent(id)}/client`);
+    const data = await resp.json();
+    if (data.profile) {
+      $('cpFullName').value       = data.profile.full_name       || '';
+      $('cpShortName').value      = data.profile.short_name      || '';
+      $('cpDomain').value         = data.profile.domain          || '';
+      $('cpNetbios').value        = data.profile.netbios         || '';
+      $('cpAssessmentType').value = data.profile.assessment_type || '';
+      $('cpAssessor').value       = data.profile.assessor        || '';
+      $('cpPeriod').value         = data.profile.period          || '';
+    }
+  } catch(e) { /* no profile yet — leave fields empty */ }
+}
+
+async function saveClientProfile() {
+  const id = engagementId();
+  const profile = {
+    full_name:       $('cpFullName').value.trim(),
+    short_name:      $('cpShortName').value.trim(),
+    domain:          $('cpDomain').value.trim(),
+    netbios:         $('cpNetbios').value.trim(),
+    assessment_type: $('cpAssessmentType').value.trim(),
+    assessor:        $('cpAssessor').value.trim(),
+    period:          $('cpPeriod').value.trim(),
+  };
+
+  try {
+    // Save profile
+    const resp = await fetch(`/api/engagement/${encodeURIComponent(id)}/client`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(profile)
+    });
+    if (!resp.ok) throw new Error('Save failed');
+
+    // Register name variations as keywords
+    const variations = [profile.full_name, profile.short_name, profile.domain, profile.netbios]
+      .filter(v => v.length >= 2);
+    for (const kw of variations) {
+      await fetch(`/api/engagement/${encodeURIComponent(id)}/keywords`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ keyword: kw })
+      });
+    }
+
+    // Pre-fill report context if empty
+    const ctx = $('reportContext');
+    if (!ctx.value.trim()) {
+      ctx.value = buildClientContext(profile);
+      updateReportPreview();
+    }
+
+    $('cpStatus').textContent = `✓ Saved — ${variations.length} keyword${variations.length!==1?'s':''} registered`;
+    $('cpStatus').style.color = 'var(--green)';
+    setTimeout(() => $('clientModal').style.display = 'none', 900);
+
+  } catch(e) {
+    $('cpStatus').textContent = 'Error: ' + e.message;
+    $('cpStatus').style.color = 'var(--red)';
+  }
+}
+
+function buildClientContext(profile) {
+  const parts = [];
+  if (profile.assessment_type) parts.push(profile.assessment_type + ' penetration test');
+  else parts.push('Penetration test');
+  if (profile.full_name) {
+    parts[0] += ' against ' + profile.full_name;
+    if (profile.short_name && profile.short_name !== profile.full_name)
+      parts[0] += ' (' + profile.short_name + ')';
+  }
+  if (profile.domain) {
+    let domainStr = 'Domain: ' + profile.domain;
+    if (profile.netbios) domainStr += ' (' + profile.netbios + ')';
+    parts.push(domainStr);
+  }
+  if (profile.assessor) parts.push('Assessed by ' + profile.assessor);
+  if (profile.period)   parts.push('Period: ' + profile.period);
+  return parts.join('. ') + '.';
+}
+
+async function loadClientProfileOnEngagementChange() {
+  const id = engagementId();
+  if (!id || id === 'default') return;
+  try {
+    const resp = await fetch(`/api/engagement/${encodeURIComponent(id)}/client`);
+    const data = await resp.json();
+    if (data.profile) {
+      const ctx = $('reportContext');
+      if (!ctx.value.trim()) {
+        ctx.value = buildClientContext(data.profile);
+        updateReportPreview();
+      }
+    }
+  } catch(e) { /* no profile — ignore */ }
+}
+
+// ══════════════════════════════════════════════
 // ENGAGEMENT MANAGEMENT
 // ══════════════════════════════════════════════
 function onEngagementChange() {
@@ -955,6 +1122,7 @@ function onEngagementChange() {
     $('engWarn').style.display = 'block'; $('engagementId').classList.add('warn');
   } else {
     $('engWarn').style.display = 'none'; $('engagementId').classList.remove('warn');
+    loadClientProfileOnEngagementChange();
   }
 }
 

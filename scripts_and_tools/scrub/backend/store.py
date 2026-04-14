@@ -100,6 +100,21 @@ def init_db():
         )
     """)
 
+    # Client profile — identifying info for the engagement
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS client_profile (
+            engagement_id TEXT PRIMARY KEY,
+            full_name TEXT NOT NULL DEFAULT '',
+            short_name TEXT NOT NULL DEFAULT '',
+            domain TEXT NOT NULL DEFAULT '',
+            netbios TEXT NOT NULL DEFAULT '',
+            assessment_type TEXT NOT NULL DEFAULT '',
+            assessor TEXT NOT NULL DEFAULT '',
+            period TEXT NOT NULL DEFAULT '',
+            updated_at REAL NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 # TOKEN STORE OPERATIONS
@@ -342,6 +357,10 @@ def close_engagement(engagement_id: str) -> dict:
         engagement_id,
     ))
 
+    # Purge client profile and custom keywords in same transaction
+    cur.execute("DELETE FROM client_profile WHERE engagement_id = ?", (engagement_id,))
+    cur.execute("DELETE FROM custom_keywords WHERE engagement_id = ?", (engagement_id,))
+
     conn.commit()
     conn.close()
 
@@ -357,6 +376,59 @@ def close_engagement(engagement_id: str) -> dict:
         "mappings_purged": mapping_count,
         "salt_deleted": salt_deleted,
     }
+
+
+# ─────────────────────────────────────────────
+# CLIENT PROFILE
+# ─────────────────────────────────────────────
+
+def save_client_profile(engagement_id: str, profile: dict) -> None:
+    """Upsert client profile for an engagement."""
+    conn = sqlite3.connect(DB_PATH)
+    cur  = conn.cursor()
+    cur.execute("""
+        INSERT INTO client_profile
+            (engagement_id, full_name, short_name, domain, netbios,
+             assessment_type, assessor, period, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(engagement_id) DO UPDATE SET
+            full_name       = excluded.full_name,
+            short_name      = excluded.short_name,
+            domain          = excluded.domain,
+            netbios         = excluded.netbios,
+            assessment_type = excluded.assessment_type,
+            assessor        = excluded.assessor,
+            period          = excluded.period,
+            updated_at      = excluded.updated_at
+    """, (
+        engagement_id,
+        profile.get("full_name", ""),
+        profile.get("short_name", ""),
+        profile.get("domain", ""),
+        profile.get("netbios", ""),
+        profile.get("assessment_type", ""),
+        profile.get("assessor", ""),
+        profile.get("period", ""),
+        time.time(),
+    ))
+    conn.commit()
+    conn.close()
+
+
+def get_client_profile(engagement_id: str) -> dict | None:
+    """Return client profile for an engagement, or None if not set."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur  = conn.cursor()
+    cur.execute(
+        "SELECT * FROM client_profile WHERE engagement_id = ?",
+        (engagement_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return dict(row)
 
 
 def list_engagements() -> list[dict]:
